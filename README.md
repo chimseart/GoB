@@ -35,7 +35,7 @@ sculpted detail into Blender as a Multires modifier instead:
 
 1. Copy `ZScripts/GoB_SendHighest.txt` into ZBrush's `ZStartup/ZPlugs64` folder
    and load it once with `ZScript > Load`. ZBrush compiles it and adds
-   `ZPlugin > GoB > Send Highest (All)` and `Send Highest (Visible)`.
+   `ZPlugin > GoB > Send Highest (Visible)` and `Send Highest (Selected)`.
 2. In Blender, enable `Edit > Preferences > Add-ons > GoB > Import > Rebuild Multires`
    and turn on the GoB auto-import button.
 3. In ZBrush, press one of the `Send Highest` buttons. Each subtool is exported at

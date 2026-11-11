@@ -1,7 +1,7 @@
 /*
 name: GoB_SendHighest
 description: Send subtools to Blender at their HIGHEST subdivision level.
-             Adds "ZPlugin > GoB > Send Highest (All)" and "Send Highest (Visible)".
+             Adds "ZPlugin > GoB > Send Highest (Visible)" and "Send Highest (Selected)".
              Each subtool is exported as .GoZ at its highest level, together with
              a small "<name>.GoB_SDiv.txt" file that tells Blender how many
              subdivision levels the subtool has, so GoB can rebuild a Multires
@@ -75,8 +75,9 @@ install: copy this file into ZStartup/ZPlugs64 and load it once with
     [VarSet, stIndex, 0]
 
     [Loop, stTotal,
-        // bit 0x1 of the subtool status is the "eye" (visible) flag
-        [If, (visibleOnly == 0) || (([SubToolGetStatus, stIndex] & 1) == 1),
+        // sendMode 1: visible subtools (bit 0x1 of the status is the eye flag)
+        // sendMode 2: only the selected (active) subtool
+        [If, ((sendMode == 1) && (([SubToolGetStatus, stIndex] & 1) == 1)) || ((sendMode == 2) && (stIndex == startIndex)),
             [SubToolSelect, stIndex]
             [VarSet, subtoolName, [IGetTitle, "Tool:ItemInfo"]]
             [VarSet, subtoolName, [StrExtract, subtoolName, 0, [StrLength, subtoolName] - 2]]
@@ -123,16 +124,16 @@ install: copy this file into ZStartup/ZPlugs64 and load it once with
         [Note, "GoB: no subtools to send.", , 2]
     ]
     [MemDelete, GoBHigh_ListMem]
-, visibleOnly]
+, sendMode]
 
 [ISubPalette, "ZPlugin:GoB"]
-
-[IButton, "ZPlugin:GoB:Send Highest (All)",
-    "Send all subtools to Blender at their highest subdivision level",
-    [RoutineCall, GoBHigh_Send, 0]
-, , 1]
 
 [IButton, "ZPlugin:GoB:Send Highest (Visible)",
     "Send visible subtools to Blender at their highest subdivision level",
     [RoutineCall, GoBHigh_Send, 1]
+, , 1]
+
+[IButton, "ZPlugin:GoB:Send Highest (Selected)",
+    "Send the selected subtool to Blender at its highest subdivision level",
+    [RoutineCall, GoBHigh_Send, 2]
 , , 1]
