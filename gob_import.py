@@ -29,7 +29,7 @@ import numpy as np
 from bpy.props import EnumProperty
 from bpy.types import Operator
 
-from . import geometry, multires, nodes, paths, utils
+from . import creases, geometry, multires, nodes, paths, utils
 
 run_background_update = False
 gob_import_cache = []
@@ -1195,6 +1195,24 @@ class GoB_OT_import(Operator):
                         start_time = utils.profiler(
                             start_time, "Assign data to polygons"
                         )
+
+                # Creases
+                elif tag == creases.CREASE_TAG:
+                    if utils.prefs().debug_output:
+                        print("Creases:", tag)
+                    cnt, crease_payload = _read_goz_section(
+                        goz_file, self, "Crease"
+                    )
+                    if utils.prefs().import_creases:
+                        creased_edges = creases.apply_import(
+                            me,
+                            facesData,
+                            crease_payload[: min(cnt, len(crease_payload))],
+                        )
+                        if utils.prefs().debug_output:
+                            print("Creased edges:", creased_edges)
+                    if utils.prefs().performance_profiling:
+                        start_time = utils.profiler(start_time, "Creases")
 
                 # End
                 elif tag == b"\x00\x00\x00\x00":

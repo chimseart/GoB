@@ -25,7 +25,7 @@ from struct import pack
 from subprocess import Popen
 from bpy.types import Operator
 from bpy.props import BoolProperty
-from . import paths, utils, geometry, ui, gob_import
+from . import paths, utils, geometry, ui, gob_import, creases
 
 
 _EXPORT_VERTEX_CHUNK = 1_000_000
@@ -503,6 +503,17 @@ class GoB_OT_export(Operator):
 
                     if utils.prefs().performance_profiling:
                         start_time = utils.profiler(start_time, "Write Polygroup materials")
+
+            # --Creases--
+            if utils.prefs().export_creases:
+                crease_data = creases.export_bytes(mesh_tmp)
+                if crease_data is not None:
+                    goz_file.write(creases.CREASE_TAG)
+                    goz_file.write(pack('<I', numFaces + 16))
+                    goz_file.write(pack('<Q', numFaces))
+                    goz_file.write(crease_data)
+                if utils.prefs().performance_profiling:
+                    start_time = utils.profiler(start_time, "Write Creases")
 
             # Diff, disp_texture and norm_texture maps
             diff_texture = None

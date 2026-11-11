@@ -10,6 +10,7 @@ You can transfer:
 * Mask
 * FaceSets
 * Polygroup
+* Creases (ZBrush edge creases <-> Blender edge crease)
 * Diffuse map
 * Normal map
 * Displacement map

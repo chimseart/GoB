@@ -329,6 +329,11 @@ class GoB_Preferences(AddonPreferences):
         default="ONLY_EXPORT",
     )  # Default: ONLY_EXPORT
 
+    export_creases: BoolProperty(
+        name="Creases",
+        description="Export Blender edge creases as ZBrush creases",
+        default=True,
+    )  # Default: True
     export_polygroups: EnumProperty(
         name="Polygroups",
         description="Create Polygroups",
@@ -460,6 +465,11 @@ class GoB_Preferences(AddonPreferences):
         name="Subdiv", description="Import Subdivision Levels", default=True
     )  # Default: True
 
+    import_creases: BoolProperty(
+        name="Creases",
+        description="Import ZBrush creases as Blender edge creases",
+        default=True,
+    )  # Default: True
     import_multires: BoolProperty(
         name="Rebuild Multires",
         description=(
@@ -688,6 +698,8 @@ class GoB_Preferences(AddonPreferences):
         pg_col.prop(self, "import_polygroups_to_vertexgroups")
         pg_col.prop(self, "import_polygroups_to_facesets")
 
+        col.prop(self, "import_creases")
+
         mr_row = col.row(align=True)
         mr_row.prop(self, "import_multires")
         if self.import_multires:
@@ -714,6 +726,7 @@ class GoB_Preferences(AddonPreferences):
         if self.export_polygroups == "VERTEX_GROUPS":
             col.prop(self, "export_weight_threshold")
         col.prop(self, "export_mask")
+        col.prop(self, "export_creases")
         col.prop(self, "export_uv_flip_x")
         col.prop(self, "export_uv_flip_y")
 
