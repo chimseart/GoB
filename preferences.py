@@ -460,6 +460,34 @@ class GoB_Preferences(AddonPreferences):
         name="Subdiv", description="Import Subdivision Levels", default=True
     )  # Default: True
 
+    import_multires: BoolProperty(
+        name="Rebuild Multires",
+        description=(
+            "For meshes sent with the ZBrush 'GoB > Send Highest' buttons: add a "
+            "Multires modifier and rebuild the lower subdivision levels from the "
+            "highest level. Normal GoZ imports are not affected"
+        ),
+        default=False,
+    )  # Default: False
+    import_multires_levels: EnumProperty(
+        name="Levels",
+        description="How many subdivision levels to rebuild",
+        items=[
+            (
+                "ZBRUSH",
+                "Match ZBrush",
+                "Rebuild the same number of levels the subtool has in ZBrush",
+            ),
+            (
+                "MAX",
+                "As Many As Possible",
+                "Rebuild down to the lowest level Blender can find, which may be "
+                "lower than the ZBrush base",
+            ),
+        ],
+        default="ZBRUSH",
+    )  # Default: ZBRUSH
+
     import_polypaint: BoolProperty(
         name="Polypaint", description="Import Polypaint as Vertex Color", default=True
     )  # Default: True
@@ -660,6 +688,11 @@ class GoB_Preferences(AddonPreferences):
         pg_col = col.column()
         pg_col.prop(self, "import_polygroups_to_vertexgroups")
         pg_col.prop(self, "import_polygroups_to_facesets")
+
+        mr_row = col.row(align=True)
+        mr_row.prop(self, "import_multires")
+        if self.import_multires:
+            mr_row.prop(self, "import_multires_levels", text="")
 
         if self.import_material == "TEXTURES":
             row = box.row(align=True)

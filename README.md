@@ -29,6 +29,30 @@ The addon adds two icons Import/Export to the top info panel:
 * By clicking on the Import icon, you toggle autoloading mode. This will automatically load any models into blender that are exported from ZBrush via GoZ.
 * By clicking on the Manual icon, you execute a one time import of the most recent model exported from ZBrush via GoZ.
 
+## Send the highest subdivision level (optional)
+ZBrush's GoZ button always sends the lowest subdivision level. To bring the
+sculpted detail into Blender as a Multires modifier instead:
+
+1. Copy `ZScripts/GoB_SendHighest.txt` into ZBrush's `ZStartup/ZPlugs64` folder
+   and load it once with `ZScript > Load`. ZBrush compiles it and adds
+   `ZPlugin > GoB > Send Highest (All)` and `Send Highest (Visible)`.
+2. In Blender, enable `Edit > Preferences > Add-ons > GoB > Import > Rebuild Multires`
+   and turn on the GoB auto-import button.
+3. In ZBrush, press one of the `Send Highest` buttons. Each subtool is exported at
+   its highest level, then put back on the level you were working on.
+4. Blender imports the high-resolution mesh, adds a Multires modifier and rebuilds
+   the lower levels:
+   * **Match ZBrush**: the same number of levels as the subtool has in ZBrush.
+   * **As Many As Possible**: down to the lowest level Blender can find.
+
+Notes:
+* Rebuilding only works on meshes made by subdividing (quads, no DynaMesh or
+  ZRemesher after the last subdivision). If it can't, GoB shows a warning and
+  keeps the levels it could rebuild.
+* Multires stores shape only. Polypaint, mask and polygroups end up on the
+  rebuilt base mesh, so their high-resolution detail is lost.
+* Normal GoZ imports are not affected by this option.
+
 
 # Acknowledgements
 This script was originally written by user "Stunton" and posted [here on ZBrushCentral](http://www.zbrushcentral.com/showthread.php?127419-GoB-an-unofficial-GoZ-for-Blender).

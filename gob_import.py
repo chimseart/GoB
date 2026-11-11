@@ -29,7 +29,7 @@ import numpy as np
 from bpy.props import EnumProperty
 from bpy.types import Operator
 
-from . import geometry, nodes, paths, utils
+from . import geometry, multires, nodes, paths, utils
 
 run_background_update = False
 gob_import_cache = []
@@ -530,6 +530,12 @@ class GoB_OT_import(Operator):
                 print(f"Cant read mesh from: {pathFile}. Skipping")
             return
 
+        # Set when the file came from the ZBrush "GoB Send Highest" script.
+        zbrush_levels = multires.consume_zbrush_levels(pathFile)
+        rebuild_multires = (
+            zbrush_levels is not None and utils.prefs().import_multires
+        )
+
         with open(pathFile, "rb") as goz_file:
             objName = _read_goz_object_name(goz_file, self)
             if objName is None:
@@ -667,6 +673,12 @@ class GoB_OT_import(Operator):
 
             if utils.prefs().performance_profiling:
                 start_time = utils.profiler(start_time, "Unpack Mesh Data\n")
+
+            if rebuild_multires:
+                existing = bpy.data.objects.get(objName)
+                if existing is not None:
+                    # The old Multires belongs to the old base mesh topology.
+                    multires.remove_multires(existing)
 
             obj, me = self.make_mesh(objName, vertsData, facesData)
             if utils.prefs().performance_profiling:
@@ -1270,6 +1282,19 @@ class GoB_OT_import(Operator):
 
             if utils.prefs().performance_profiling:
                 start_time = utils.profiler(start_time, "Material Node")
+
+            # MULTIRES
+            if rebuild_multires:
+                levels = multires.rebuild(
+                    obj,
+                    zbrush_levels,
+                    utils.prefs().import_multires_levels,
+                    report=lambda message: _report_import_warning(self, message),
+                )
+                if utils.prefs().debug_output:
+                    print(f"GoB: rebuilt {levels} Multires levels on {obj.name}")
+                if utils.prefs().performance_profiling:
+                    start_time = utils.profiler(start_time, "Multires Rebuild")
 
             if utils.prefs().performance_profiling:
                 print(30 * "-")

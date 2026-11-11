@@ -1,0 +1,138 @@
+/*
+name: GoB_SendHighest
+description: Send subtools to Blender at their HIGHEST subdivision level.
+             Adds "ZPlugin > GoB > Send Highest (All)" and "Send Highest (Visible)".
+             Each subtool is exported as .GoZ at its highest level, together with
+             a small "<name>.GoB_SDiv.txt" file that tells Blender how many
+             subdivision levels the subtool has, so GoB can rebuild a Multires
+             modifier. The active level of every subtool is restored afterwards.
+tracker_url: https://github.com/JoseConseco/GoB
+install: copy this file into ZStartup/ZPlugs64 and load it once with
+         ZScript > Load (ZBrush compiles it to GoB_SendHighest.zsc).
+*/
+
+[VarDef, isMac, 0]
+[VarDef, GoZPath, ""]
+[VarDef, defaultPath, "C:/Users/Public/Pixologic"]
+[VarDef, defaultPathMac, "/Users/Shared/Pixologic"]
+[VarDef, filePrefix, ""]        // "!:" on macOS for ZBrush file commands
+[VarDef, projDir, ""]           // GoZProjects/Default/ folder, plain path
+[VarDef, objectListFile, ""]
+[VarDef, subtoolName, ""]
+[VarDef, objPath, ""]
+[VarDef, levelCount, 1]
+[VarDef, oldLevel, 1]
+[VarDef, listOffset, 0]
+[VarDef, sentCount, 0]
+[VarDef, stIndex, 0]
+[VarDef, stTotal, 0]
+[VarDef, startIndex, 0]
+[VarDef, levelStr, ""]
+[VarDef, folderPath, ""]
+
+// Find the Pixologic public folder: same settings file as GoB_Import, else OS default.
+[RoutineDef, GoBHigh_SetPaths,
+    [VarSet, isMac, [ZBrushInfo, 6]]
+    [If, isMac,
+        [VarSet, GoZPath, defaultPathMac]
+        [VarSet, filePrefix, "!:"]
+    ,
+        [VarSet, GoZPath, defaultPath]
+        [VarSet, filePrefix, ""]
+    ]
+    [If, [FileExists, "GoB_Import_Settings.svr"],
+        [VarLoad, folderPath, "GoB_Import_Settings.svr"]
+        [If, [StrLength, folderPath] > 0,
+            [VarSet, GoZPath, folderPath]
+        ]
+    ]
+    [VarSet, projDir, [StrMerge, GoZPath, "/GoZProjects/Default/"]]
+    [VarSet, objectListFile, [StrMerge, GoZPath, "/GoZBrush/GoZ_ObjectList.txt"]]
+]
+
+// Write a short text file (used for the level-count sidecar).
+[RoutineDef, GoBHigh_WriteText,
+    [If, [MemGetSize, GoBHigh_TextMem], [MemDelete, GoBHigh_TextMem]]
+    [MemCreate, GoBHigh_TextMem, [StrLength, textStr], 0]
+    [MemWriteString, GoBHigh_TextMem, textStr, 0, 0]
+    [MemSaveToFile, GoBHigh_TextMem, [StrMerge, filePrefix, textFile], 1]
+    [MemDelete, GoBHigh_TextMem]
+, textStr, textFile]
+
+[RoutineDef, GoBHigh_Send,
+    [If, [IExists, Tool:SubTool],,
+        [Note, "GoB: select a PolyMesh3D tool first."]
+        [Exit]
+    ]
+    [RoutineCall, GoBHigh_SetPaths]
+
+    [If, [MemGetSize, GoBHigh_ListMem], [MemDelete, GoBHigh_ListMem]]
+    [MemCreate, GoBHigh_ListMem, 262144, 0]
+    [VarSet, listOffset, 0]
+    [VarSet, sentCount, 0]
+    [VarSet, startIndex, [SubToolGetActiveIndex]]
+    [VarSet, stTotal, [SubToolGetCount]]
+    [VarSet, stIndex, 0]
+
+    [Loop, stTotal,
+        // bit 0x1 of the subtool status is the "eye" (visible) flag
+        [If, (visibleOnly == 0) || (([SubToolGetStatus, stIndex] & 1) == 1),
+            [SubToolSelect, stIndex]
+            [VarSet, subtoolName, [IGetTitle, "Tool:ItemInfo"]]
+            [VarSet, subtoolName, [StrExtract, subtoolName, 0, [StrLength, subtoolName] - 2]]
+
+            // go to the highest subdivision level, remembering the current one
+            [VarSet, levelCount, 1]
+            [VarSet, oldLevel, 1]
+            [If, [IsEnabled, Tool:Geometry:SDiv],
+                [VarSet, oldLevel, [IGet, Tool:Geometry:SDiv]]
+                [VarSet, levelCount, [IGetMax, Tool:Geometry:SDiv]]
+                [ISet, Tool:Geometry:SDiv, levelCount]
+            ]
+
+            [VarSet, objPath, [StrMerge, projDir, subtoolName]]
+            [FileNameSetNext, [StrMerge, filePrefix, objPath, ".GoZ"]]
+            [IPress, Tool:Export]
+
+            // sidecar: number of ZBrush subdivision levels
+            [VarSet, levelStr, [StrMerge, "", [Val, levelCount]]]
+            [RoutineCall, GoBHigh_WriteText, levelStr, [StrMerge, objPath, ".GoB_SDiv.txt"]]
+
+            // restore the level the user was working on
+            [If, levelCount > 1,
+                [ISet, Tool:Geometry:SDiv, oldLevel]
+            ]
+
+            // add "<path without extension>\n" to the object list
+            [MemWriteString, GoBHigh_ListMem, objPath, listOffset, 0]
+            [VarAdd, listOffset, [StrLength, objPath]]
+            [MemWriteString, GoBHigh_ListMem, [StrFromAsc, 10], listOffset, 0]
+            [VarInc, listOffset]
+            [VarInc, sentCount]
+        ]
+        [VarInc, stIndex]
+    ]
+    [SubToolSelect, startIndex]
+
+    [If, sentCount > 0,
+        // Writing the object list last makes Blender's GoB auto-import pick it up.
+        [MemResize, GoBHigh_ListMem, listOffset]
+        [MemSaveToFile, GoBHigh_ListMem, [StrMerge, filePrefix, objectListFile], 1]
+        [Note, [StrMerge, "GoB: sent ", sentCount, " subtool(s) at highest level."], , 1]
+    ,
+        [Note, "GoB: no subtools to send.", , 2]
+    ]
+    [MemDelete, GoBHigh_ListMem]
+, visibleOnly]
+
+[ISubPalette, "ZPlugin:GoB"]
+
+[IButton, "ZPlugin:GoB:Send Highest (All)",
+    "Send all subtools to Blender at their highest subdivision level",
+    [RoutineCall, GoBHigh_Send, 0]
+, , 1]
+
+[IButton, "ZPlugin:GoB:Send Highest (Visible)",
+    "Send visible subtools to Blender at their highest subdivision level",
+    [RoutineCall, GoBHigh_Send, 1]
+, , 1]
