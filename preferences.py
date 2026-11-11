@@ -474,19 +474,18 @@ class GoB_Preferences(AddonPreferences):
         description="How many subdivision levels to rebuild",
         items=[
             (
-                "ZBRUSH",
-                "Match ZBrush",
-                "Rebuild the same number of levels the subtool has in ZBrush",
+                "LOWEST",
+                "Lowest Possible",
+                "Unsubdivide down to the lowest level Blender can find",
             ),
             (
-                "MAX",
-                "As Many As Possible",
-                "Rebuild down to the lowest level Blender can find, which may be "
-                "lower than the ZBrush base",
+                "ZBRUSH",
+                "Match ZBrush",
+                "Unsubdivide only as many levels as the subtool has in ZBrush",
             ),
         ],
-        default="ZBRUSH",
-    )  # Default: ZBRUSH
+        default="LOWEST",
+    )  # Default: LOWEST
 
     import_polypaint: BoolProperty(
         name="Polypaint", description="Import Polypaint as Vertex Color", default=True

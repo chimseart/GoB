@@ -40,10 +40,10 @@ sculpted detail into Blender as a Multires modifier instead:
    and turn on the GoB auto-import button.
 3. In ZBrush, press one of the `Send Highest` buttons. Each subtool is exported at
    its highest level, then put back on the level you were working on.
-4. Blender imports the high-resolution mesh, adds a Multires modifier and rebuilds
-   the lower levels:
-   * **Match ZBrush**: the same number of levels as the subtool has in ZBrush.
-   * **As Many As Possible**: down to the lowest level Blender can find.
+4. Blender imports the high-resolution mesh, adds a Multires modifier and presses
+   Unsubdivide for you, then shows the full detail:
+   * **Lowest Possible** (default): unsubdivides until Blender can't go lower.
+   * **Match ZBrush**: only as many levels as the subtool has in ZBrush.
 
 Notes:
 * Rebuilding only works on meshes made by subdividing (quads, no DynaMesh or

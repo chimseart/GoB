@@ -70,12 +70,29 @@ def remove_multires(obj):
         obj.modifiers.remove(modifier)
 
 
-def rebuild(obj, zbrush_levels, mode, report=None):
-    """Add a Multires modifier and rebuild subdivision levels from the mesh.
+MAX_UNSUBDIVIDE_STEPS = 12
 
-    mode "ZBRUSH": rebuild the same number of levels the subtool has in
-    ZBrush (zbrush_levels - 1 subdivisions above the base).
-    mode "MAX": rebuild as many levels as Blender can find.
+
+def _show_top_level(object_name):
+    """Show the full detail: viewport, sculpt and render at the top level."""
+
+    obj = bpy.data.objects.get(object_name)
+    if obj is None:
+        return None
+    for modifier in obj.modifiers:
+        if modifier.type == "MULTIRES" and modifier.name == MODIFIER_NAME:
+            modifier.levels = modifier.total_levels
+            modifier.sculpt_levels = modifier.total_levels
+            modifier.render_levels = modifier.total_levels
+    return None  # one-shot timer
+
+
+def rebuild(obj, zbrush_levels, mode, report=None):
+    """Add a Multires modifier and Unsubdivide it to rebuild the lower levels.
+
+    mode "LOWEST": press Unsubdivide until Blender cannot go any lower.
+    mode "ZBRUSH": Unsubdivide only as many times as the subtool has
+    subdivision levels in ZBrush (zbrush_levels - 1).
 
     Returns the number of levels rebuilt. Warnings go to `report(message)`.
     """
@@ -83,8 +100,12 @@ def rebuild(obj, zbrush_levels, mode, report=None):
     if report is None:
         report = lambda message: print(f"GoB: {message}")  # noqa: E731
 
-    if mode == "ZBRUSH" and zbrush_levels <= 1:
-        return 0
+    if mode == "ZBRUSH":
+        steps = zbrush_levels - 1
+        if steps <= 0:
+            return 0
+    else:
+        steps = MAX_UNSUBDIVIDE_STEPS
     if not obj.data.polygons:
         return 0
 
@@ -93,32 +114,27 @@ def rebuild(obj, zbrush_levels, mode, report=None):
     with bpy.context.temp_override(object=obj, active_object=obj):
         if len(obj.modifiers) > 1:
             bpy.ops.object.modifier_move_to_index(modifier=modifier.name, index=0)
-
-        if mode == "MAX":
+        for _ in range(steps):
             try:
-                bpy.ops.object.multires_rebuild_subdiv(modifier=modifier.name)
-            except RuntimeError as error:
-                report(f"could not rebuild subdivisions for {obj.name}: {error}")
-        else:
-            wanted = zbrush_levels - 1
-            for _ in range(wanted):
-                try:
-                    bpy.ops.object.multires_unsubdivide(modifier=modifier.name)
-                except RuntimeError:
-                    break
-            if modifier.total_levels < wanted:
-                report(
-                    f"{obj.name} has {zbrush_levels} levels in ZBrush, "
-                    f"but Blender could only rebuild {modifier.total_levels + 1}."
-                )
+                bpy.ops.object.multires_unsubdivide(modifier=modifier.name)
+            except RuntimeError:
+                break  # already at the lowest level Blender can find
+
+    if mode == "ZBRUSH" and modifier.total_levels < steps:
+        report(
+            f"{obj.name} has {zbrush_levels} levels in ZBrush, "
+            f"but Blender could only rebuild {modifier.total_levels + 1}."
+        )
 
     if modifier.total_levels == 0:
-        # Nothing to rebuild (e.g. triangles or non-grid topology).
+        report(f"{obj.name} could not be unsubdivided (not a subdivided mesh).")
         obj.modifiers.remove(modifier)
         return 0
 
-    # Show the full detail, like the level that was active when sending.
-    modifier.levels = modifier.total_levels
-    modifier.sculpt_levels = modifier.total_levels
-    modifier.render_levels = modifier.total_levels
+    _show_top_level(obj.name)
+    # Unsubdivide leaves Viewport/Sculpt at 0 and later UI updates can keep
+    # them there, so set them again once Blender is idle.
+    bpy.app.timers.register(
+        lambda name=obj.name: _show_top_level(name), first_interval=0.1
+    )
     return modifier.total_levels

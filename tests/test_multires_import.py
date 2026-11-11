@@ -133,11 +133,13 @@ class MultiresImportTests(unittest.TestCase):
         self.assertEqual(mod.total_levels, 1)
         self.assertEqual(len(obj.data.vertices), CUBE_VERTS[2])
 
-    def test_max_levels(self):
-        self.prefs.import_multires_levels = "MAX"
+    def test_lowest_levels(self):
+        self.prefs.import_multires_levels = "LOWEST"
         self.write_sidecar(2)
         obj = self.import_body()
-        self.assertEqual(self.multires_mod(obj).total_levels, 3)
+        mod = self.multires_mod(obj)
+        self.assertEqual(mod.total_levels, 3)
+        self.assertEqual((mod.levels, mod.sculpt_levels, mod.render_levels), (3, 3, 3))
         self.assertEqual(len(obj.data.vertices), CUBE_VERTS[0])
 
     def test_single_level_has_no_multires(self):
